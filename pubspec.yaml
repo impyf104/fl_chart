@@ -11,7 +11,9 @@ dependencies:
     sdk: flutter
 
   path_drawing: ^0.4.1
-  equatable: ^1.1.1
+  equatable: ^1.2.0
+  flustars: ^0.3.2  
+
 
 dev_dependencies:
   flutter_test:

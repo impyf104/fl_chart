@@ -911,15 +911,17 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
               textScaleFactor: textScale);
           tp.layout(maxWidth: getExtraNeededHorizontalSpace());
 
-          x += rightTitles.margin;
-          y -= tp.height / 2;
-          canvas.save();
-          canvas.translate(x + tp.width / 2, y + tp.height / 2);
-          canvas.rotate(radians(rightTitles.rotateAngle));
-          canvas.translate(-(x + tp.width / 2), -(y + tp.height / 2));
-          y += translateRotatedPosition(tp.width, leftTitles.rotateAngle);
-          tp.paint(canvas, Offset(x, y));
-          canvas.restore();
+          if (canDrawTitle(y, tp, viewSize)) {
+            x += rightTitles.margin;
+            y -= tp.height / 2;
+            canvas.save();
+            canvas.translate(x + tp.width / 2, y + tp.height / 2);
+            canvas.rotate(radians(rightTitles.rotateAngle));
+            canvas.translate(-(x + tp.width / 2), -(y + tp.height / 2));
+            y += translateRotatedPosition(tp.width, leftTitles.rotateAngle);
+            tp.paint(canvas, Offset(x, y));
+            canvas.restore();
+          }
         }
 
         if (data.maxY - verticalSeek < rightInterval && data.maxY != verticalSeek) {
@@ -970,6 +972,48 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
     }
   }
 
+  bool canDrawTitle(double y, TextPainter tp, Size viewSize) {
+    if (data.extraLinesData == null) {
+      return true;
+    }
+    if (data.extraLinesData.horizontalLines.isNotEmpty) {
+      final double topY = y + tp.height / 2;
+      final double bottomY = y - tp.height / 2;
+
+      for (HorizontalLine line in data.extraLinesData.horizontalLines) {
+        final Size chartUsableSize = getChartUsableDrawSize(viewSize);
+        final double rightChartPadding = getExtraNeededHorizontalSpace() - getLeftOffsetDrawSize();
+
+        final Offset from =
+            Offset(viewSize.width - rightChartPadding, getPixelY(line.y, chartUsableSize));
+
+        final Offset to = Offset(viewSize.width, getPixelY(line.y, chartUsableSize));
+        if (line.label != null && line.label.show) {
+          final HorizontalLineLabel label = line.label;
+          final EdgeInsets padding = label.padding ?? EdgeInsets.zero;
+
+          const double topPadding = 4;
+          const double bottomPadding = 4;
+
+          final double top = from.dy + padding.top + topPadding;
+          final double bottom = to.dy - padding.bottom - bottomPadding;
+          final double height = top - bottom;
+          final double centerY = (top + bottom) / 2;
+          if (topY <= centerY + height / 2 && topY >= centerY - height / 2) {
+            print('TOP Y:$topY, TOP ${centerY + height / 2} BOTTOM ${centerY - height / 2}');
+            return false;
+          }
+          if (bottomY <= centerY + height / 2 && bottomY >= centerY - height / 2) {
+            return false;
+          }
+        }
+      }
+      return true;
+    } else {
+      return true;
+    }
+  }
+
   void _drawExtraLines(Canvas canvas, Size viewSize) {
     if (data.extraLinesData == null) {
       return;
@@ -979,13 +1023,20 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
 
     if (data.extraLinesData.horizontalLines.isNotEmpty) {
       for (HorizontalLine line in data.extraLinesData.horizontalLines) {
-        final double leftChartPadding = getLeftOffsetDrawSize();
-        final Offset from = Offset(leftChartPadding, getPixelY(line.y, chartUsableSize));
+        // final double leftChartPadding = getLeftOffsetDrawSize();
+        // final Offset from = Offset(leftChartPadding, getPixelY(line.y, chartUsableSize));
 
+        // final double rightChartPadding = getExtraNeededHorizontalSpace() - getLeftOffsetDrawSize();
+        // final Offset to =
+        //     Offset(viewSize.width - rightChartPadding, getPixelY(line.y, chartUsableSize));
+        final double leftChartPadding = getLeftOffsetDrawSize();
+        final rightTitles = targetData.titlesData.rightTitles;
         final double rightChartPadding = getExtraNeededHorizontalSpace() - getLeftOffsetDrawSize();
-        final Offset to =
+
+        final Offset from =
             Offset(viewSize.width - rightChartPadding, getPixelY(line.y, chartUsableSize));
 
+        final Offset to = Offset(viewSize.width, getPixelY(line.y, chartUsableSize));
         _extraLinesPaint.color = line.color;
         _extraLinesPaint.strokeWidth = line.strokeWidth;
 
@@ -1012,7 +1063,7 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
 
         if (line.label != null && line.label.show) {
           final HorizontalLineLabel label = line.label;
-          final TextStyle style = TextStyle(fontSize: 11, color: line.color).merge(label.style);
+          final TextStyle style = TextStyle(color: line.color).merge(label.style);
           final EdgeInsets padding = label.padding ?? EdgeInsets.zero;
 
           final TextSpan span = TextSpan(
@@ -1022,15 +1073,50 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
 
           final TextPainter tp = TextPainter(
             text: span,
+            textAlign: TextAlign.center,
             textDirection: TextDirection.ltr,
           );
 
           tp.layout();
+
+          const double leftPadding = 8;
+          const double rightPadding = 8;
+          const double topPadding = 4;
+          const double bottomPadding = 4;
+
+          final double top = from.dy + padding.top + topPadding;
+          final double bottom = to.dy - padding.bottom - bottomPadding;
+          final double height = top - bottom;
+
+          final double left = from.dx - padding.left + rightTitles.margin - leftPadding;
+          final double right = left + height / 2 + tp.width + rightPadding;
+
+          final double centerY = (top + bottom) / 2;
+
+          final Paint paint = Paint()
+            ..isAntiAlias = true
+            ..style = PaintingStyle.fill
+            ..color = Colors.green;
+
+          final Path path = Path();
+          path.moveTo(left, centerY);
+          final List<Offset> points = [
+            Offset(left + height / 2, centerY + height / 2),
+            Offset(right, centerY + height / 2),
+            Offset(right, centerY - height / 2),
+            Offset(left + height / 2, centerY - height / 2),
+            Offset(left, centerY),
+          ];
+          for (Offset offset in points) {
+            path.lineTo(offset.dx, offset.dy);
+          }
+          canvas.drawPath(path, paint);
+
           tp.paint(
             canvas,
-            label.alignment.withinRect(
+            Alignment.centerLeft.withinRect(
               Rect.fromLTRB(
-                from.dx + padding.left,
+                from.dx + rightTitles.margin,
                 from.dy - padding.bottom - tp.height,
                 to.dx - padding.right - tp.width,
                 to.dy + padding.top,
