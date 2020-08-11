@@ -13,6 +13,7 @@ dependencies:
   path_drawing: ^0.4.1
   equatable: ^1.2.0
   flustars: ^0.3.2  
+  dio: ^3.0.9
 
 
 dev_dependencies:
