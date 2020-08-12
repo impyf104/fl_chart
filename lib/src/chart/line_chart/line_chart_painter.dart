@@ -1000,7 +1000,6 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
           final double height = top - bottom;
           final double centerY = (top + bottom) / 2;
           if (topY <= centerY + height / 2 && topY >= centerY - height / 2) {
-            print('TOP Y:$topY, TOP ${centerY + height / 2} BOTTOM ${centerY - height / 2}');
             return false;
           }
           if (bottomY <= centerY + height / 2 && bottomY >= centerY - height / 2) {
@@ -1096,7 +1095,7 @@ class LineChartPainter extends AxisChartPainter<LineChartData>
           final Paint paint = Paint()
             ..isAntiAlias = true
             ..style = PaintingStyle.fill
-            ..color = Colors.green;
+            ..color = const Color(0xff32404A);
 
           final Path path = Path();
           path.moveTo(left, centerY);
